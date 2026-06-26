@@ -20,43 +20,64 @@
  * Hooks of Extension:AControlImageLink.
  */
 
+use MediaWiki\Config\Config;
+use MediaWiki\Linker\LinkRendererFactory;
+use MediaWiki\Page\WikiPageFactory;
+use MediaWiki\Parser\Parser;
+use MediaWiki\Revision\RevisionRecord;
+use MediaWiki\Title\Title;
+
 class AControlImageLinkHooks {
+
+	private Config $config;
+	private WikiPageFactory $wikiPageFactory;
+	private LinkRendererFactory $linkRendererFactory;
+
+	public function __construct(
+		Config $config,
+		WikiPageFactory $wikiPageFactory,
+		LinkRendererFactory $linkRendererFactory
+	) {
+		$this->config = $config;
+		$this->wikiPageFactory = $wikiPageFactory;
+		$this->linkRendererFactory = $linkRendererFactory;
+	}
 
 	/**
 	 * Prevent thumbnail from rendering if image has <accesscontrol> tag,
 	 * and the article that includes it either doesn't or has a different <accesscontrol> tag.
-	 * @param DummyLinker &$dummyLinker
+	 * @param mixed &$dummyLinker
 	 * @param Title &$title
-	 * @param File|bool &$file
+	 * @param mixed &$file
 	 * @param array &$frameParams
 	 * @param array &$handlerParams
 	 * @param string|bool &$time
 	 * @param string|null &$result
-	 * @param \Parser $parser
+	 * @param Parser $parser
 	 * @param string &$query
 	 * @param int|null &$widthOption
 	 * @return bool
 	 */
-	public static function onImageBeforeProduceHTML(
+	public function onImageBeforeProduceHTML(
 		&$dummyLinker, Title &$title, &$file, array &$frameParams, array &$handlerParams,
 		&$time, &$result, Parser $parser, string &$query, &$widthOption
 	) {
-		global $wgAControlImageLinkRestrictedExtensions;
+		$restrictedExtensions = $this->config->get( 'AControlImageLinkRestrictedExtensions' );
 
 		$filenameParts = explode( '.', $title->getText() );
 		$fileExtension = array_pop( $filenameParts );
-		if ( !in_array( $fileExtension, $wgAControlImageLinkRestrictedExtensions ) ) {
+		if ( !in_array( $fileExtension, $restrictedExtensions ) ) {
 			// Images with this extension are not restricted from thumbnailing.
 			return true;
 		}
 
-		$imageRestriction = self::findAccessControlTag( $title );
+		$imageRestriction = $this->findAccessControlTag( $title );
 		if ( !$imageRestriction ) {
 			// No <accesscontrol> on image page.
 			return true;
 		}
 
-		$articleRestriction = self::findAccessControlTag( $parser->getTitle() );
+		$articleRestriction = $this->findAccessControlTag( $parser->getTitle() );
 		if ( $articleRestriction === $imageRestriction ) {
 			// Contents of <accesscontrol> tags are the same,
 			// so thumbnailing is allowed.
@@ -64,7 +85,7 @@ class AControlImageLinkHooks {
 		}
 
 		// Not allowed. Make a simple link instead of thumbnail.
-		$linkRenderer = MediaWiki\MediaWikiServices::getInstance()->getLinkRenderer();
+		$linkRenderer = $this->linkRendererFactory->create();
 		$result = $linkRenderer->makeLink( $title );
 
 		// Suppress normal handling of [[File:]] syntax.
@@ -75,9 +96,9 @@ class AControlImageLinkHooks {
 	 * @param Title $title Page where to look for <accesscontrol> tags
 	 * @return string|null Text inside <accesscontrol> tag.
 	 */
-	protected static function findAccessControlTag( Title $title ) {
-		$page = WikiPage::factory( $title );
-		$content = $page->getContent( Revision::RAW );
+	protected function findAccessControlTag( Title $title ) {
+		$page = $this->wikiPageFactory->newFromLinkTarget( $title );
+		$content = $page->getContent( RevisionRecord::RAW );
 		if ( !$content ) {
 			// Page doesn't exist.
 			return null;
