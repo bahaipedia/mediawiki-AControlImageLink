@@ -7,7 +7,7 @@
 	"license-name": "GPL-2.0+",
 	"type": "hook",
 	"requires": {
-		"MediaWiki": ">= 1.29.0"
+		"MediaWiki": ">= 1.43.0"
 	},
 	"MessagesDirs": {
 		"AControlImageLink": [
@@ -17,8 +17,18 @@
 	"AutoloadClasses": {
 		"AControlImageLinkHooks": "AControlImageLinkHooks.php"
 	},
+	"HookHandlers": {
+		"AControlImageLinkHooks": {
+			"class": "AControlImageLinkHooks",
+			"services": [
+				"MainConfig",
+				"WikiPageFactory",
+				"LinkRendererFactory"
+			]
+		}
+	},
 	"Hooks": {
-		"ImageBeforeProduceHTML": "AControlImageLinkHooks::onImageBeforeProduceHTML"
+		"ImageBeforeProduceHTML": "AControlImageLinkHooks"
 	},
 	"config": {
 		"AControlImageLinkRestrictedExtensions": {
