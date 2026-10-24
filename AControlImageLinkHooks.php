@@ -21,6 +21,7 @@
  */
 
 use MediaWiki\Config\Config;
+use MediaWiki\Content\TextContent;
 use MediaWiki\Linker\LinkRendererFactory;
 use MediaWiki\Page\WikiPageFactory;
 use MediaWiki\Parser\Parser;
@@ -99,12 +100,12 @@ class AControlImageLinkHooks {
 	protected function findAccessControlTag( Title $title ) {
 		$page = $this->wikiPageFactory->newFromLinkTarget( $title );
 		$content = $page->getContent( RevisionRecord::RAW );
-		if ( !$content ) {
-			// Page doesn't exist.
+		if ( !$content instanceof TextContent ) {
+			// Page doesn't exist or is not text content.
 			return null;
 		}
 
-		$text = $content->getNativeData();
+		$text = $content->getText();
 
 		$matches = false;
 		if ( !preg_match( '/<accesscontrol>(.*)<\/accesscontrol>/', $text, $matches ) ) {
