@@ -63,11 +63,14 @@ class AControlImageLinkHooks {
 		&$dummyLinker, Title &$title, &$file, array &$frameParams, array &$handlerParams,
 		&$time, &$result, Parser $parser, string &$query, &$widthOption
 	) {
-		$restrictedExtensions = $this->config->get( 'AControlImageLinkRestrictedExtensions' );
+		$restrictedExtensions = array_map(
+			'strtolower',
+			$this->config->get( 'AControlImageLinkRestrictedExtensions' )
+		);
 
 		$filenameParts = explode( '.', $title->getText() );
-		$fileExtension = array_pop( $filenameParts );
-		if ( !in_array( $fileExtension, $restrictedExtensions ) ) {
+		$fileExtension = strtolower( array_pop( $filenameParts ) );
+		if ( !in_array( $fileExtension, $restrictedExtensions, true ) ) {
 			// Images with this extension are not restricted from thumbnailing.
 			return true;
 		}
@@ -108,7 +111,7 @@ class AControlImageLinkHooks {
 		$text = $content->getText();
 
 		$matches = false;
-		if ( !preg_match( '/<accesscontrol>(.*)<\/accesscontrol>/', $text, $matches ) ) {
+		if ( !preg_match( '/<accesscontrol>(.*?)<\/accesscontrol>/i', $text, $matches ) ) {
 			// No <accesscontrol> tag.
 			return null;
 		}
